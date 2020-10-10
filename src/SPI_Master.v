@@ -10,8 +10,6 @@
 
 //              Any data on input byte will be shipped out on MOSI.
 
-//
-
 //              To kick-off transaction, user must pulse i_TX_DV.
 
 //              This module supports multi-byte transmissions by pulsing
@@ -69,54 +67,31 @@ module SPI_Master
     parameter CLKS_PER_HALF_BIT = 2)
 
   (
-
    // Control/Data Signals,
-
    input        i_Rst_L,     // FPGA Reset
-
    input        i_Clk,       // FPGA Clock
 
-   
-
    // TX (MOSI) Signals
+    input [7:0]  i_TX_Byte,        // Byte to transmit on MOSI//存储输入控制序列（8个比特）
+    input        i_TX_DV,          // Data Valid Pulse with i_TX_Byte//输入控制位
 
-   input [7:0]  i_TX_Byte,        // Byte to transmit on MOSI
-
-   input        i_TX_DV,          // Data Valid Pulse with i_TX_Byte
-
-   output reg   o_TX_Ready,       // Transmit Ready for next byte
-
-   
-
+   output reg   o_TX_Ready,       // Transmit Ready for next byte//等待下一输入
+    
    // RX (MISO) Signals
-
-   output reg       o_RX_DV,     // Data Valid pulse (1 clock cycle)
-
-   output reg [7:0] o_RX_Byte,   // Byte received on MISO
-
-
+   output reg       o_RX_DV,     // Data Valid pulse (1 clock cycle)//输出控制位
+   output reg [7:0] o_RX_Byte,  // Byte received on MISO//输出数据(8个比特）
 
    // SPI Interface
-
-   output reg o_SPI_Clk,
-
-   input      i_SPI_MISO,
-
-   output reg o_SPI_MOSI
-
+   output reg o_SPI_Clk,//SPI时钟
+   input      i_SPI_MISO,//SPI输入数据（1个比特）
+   output reg o_SPI_MOSI//SPI输出数据（1个比特）
    );
 
-
-
-  // SPI Interface (All Runs at SPI Clock Domain)
-
+  // SPI Interface (All Runs at SPI Clock Domain) //SPI工作模式
   wire w_CPOL;     // Clock polarity
-
   wire w_CPHA;     // Clock phase
 
-
-
-  reg [$clog2(CLKS_PER_HALF_BIT*2)-1:0] r_SPI_Clk_Count;
+  reg [$clog2(CLKS_PER_HALF_BIT*2)-1:0] r_SPI_Clk_Count;  //SPI时钟计数器
 
   reg r_SPI_Clk;
 
@@ -167,84 +142,65 @@ module SPI_Master
 
 
   // Purpose: Generate SPI Clock correct number of times when DV pulse comes
-
+  //产生SPI时钟信号，记录时钟的边沿
   always @(posedge i_Clk or negedge i_Rst_L)
 
   begin
 
     if (~i_Rst_L)
-
     begin
-
       o_TX_Ready      <= 1'b0;
-
       r_SPI_Clk_Edges <= 0;
-
       r_Leading_Edge  <= 1'b0;
-
       r_Trailing_Edge <= 1'b0;
-
       r_SPI_Clk       <= w_CPOL; // assign default state to idle state
-
       r_SPI_Clk_Count <= 0;
-
     end
 
     else
-
     begin
-
-
-
       // Default assignments
 
       r_Leading_Edge  <= 1'b0;
 
       r_Trailing_Edge <= 1'b0;
-
-      
-
-      if (i_TX_DV)
-
+    
+      if (i_TX_DV)//发送控制位来到
       begin
 
         o_TX_Ready      <= 1'b0;
 
-        r_SPI_Clk_Edges <= 16;  // Total # edges in one byte ALWAYS 16
+        r_SPI_Clk_Edges <= 16;  // Total # edges in one byte ALWAYS 16  //8个时钟周期一共有16个边沿
 
       end
 
       else if (r_SPI_Clk_Edges > 0)
-
       begin
 
         o_TX_Ready <= 1'b0;
 
-        
-
-        if (r_SPI_Clk_Count == CLKS_PER_HALF_BIT*2-1)
-
+        if (r_SPI_Clk_Count == CLKS_PER_HALF_BIT*2-1)  //一个SPI时钟周期
         begin
 
-          r_SPI_Clk_Edges <= r_SPI_Clk_Edges - 1;
+          r_SPI_Clk_Edges <= r_SPI_Clk_Edges - 1;    //时钟沿减一
 
-          r_Trailing_Edge <= 1'b1;
+          r_Trailing_Edge <= 1'b1;   //此时为下降沿
 
-          r_SPI_Clk_Count <= 0;
+          r_SPI_Clk_Count <= 0;    //一个周期结束，计数器置0
 
-          r_SPI_Clk       <= ~r_SPI_Clk;
+          r_SPI_Clk       <= ~r_SPI_Clk;  //时钟翻转
 
         end
 
-        else if (r_SPI_Clk_Count == CLKS_PER_HALF_BIT-1)
+        else if (r_SPI_Clk_Count == CLKS_PER_HALF_BIT-1)  //半个SPI时钟周期
 
         begin
 
-          r_SPI_Clk_Edges <= r_SPI_Clk_Edges - 1;
+          r_SPI_Clk_Edges <= r_SPI_Clk_Edges - 1;  //时钟沿减一
 
-          r_Leading_Edge  <= 1'b1;
+          r_Leading_Edge  <= 1'b1;  //此时为上升沿
 
-          r_SPI_Clk_Count <= r_SPI_Clk_Count + 1;
+          r_SPI_Clk_Count <= r_SPI_Clk_Count + 1;  //还未到一个周期，计数器继续加1
 
           r_SPI_Clk       <= ~r_SPI_Clk;
 
@@ -254,7 +210,7 @@ module SPI_Master
 
         begin
 
-          r_SPI_Clk_Count <= r_SPI_Clk_Count + 1;
+          r_SPI_Clk_Count <= r_SPI_Clk_Count + 1;  //计数器加1（在 r_SPI_Clk_Count = 0 或 2时也能执行加1）
 
         end
 
@@ -268,44 +224,30 @@ module SPI_Master
 
       end
 
-      
-
-      
-
     end // else: !if(~i_Rst_L)
 
   end // always @ (posedge i_Clk or negedge i_Rst_L)
 
 
 
-
-
   // Purpose: Register i_TX_Byte when Data Valid is pulsed.
-
   // Keeps local storage of byte in case higher level module changes the data
 
   always @(posedge i_Clk or negedge i_Rst_L)
-
   begin
 
     if (~i_Rst_L)
-
     begin
-
       r_TX_Byte <= 8'h00;
-
       r_TX_DV   <= 1'b0;
-
     end
 
     else
-
       begin
 
         r_TX_DV <= i_TX_DV; // 1 clock cycle delay
 
-        if (i_TX_DV)
-
+        if (i_TX_DV)//发送控制位到来
         begin
 
           r_TX_Byte <= i_TX_Byte;
@@ -320,12 +262,10 @@ module SPI_Master
 
 
 
-  // Purpose: Generate MOSI data
-
+  // Purpose: Generate MOSI data//生成发送控制序列
   // Works with both CPHA=0 and CPHA=1
 
   always @(posedge i_Clk or negedge i_Rst_L)
-
   begin
 
     if (~i_Rst_L)
@@ -370,7 +310,7 @@ module SPI_Master
 
         r_TX_Bit_Count <= r_TX_Bit_Count - 1;
 
-        o_SPI_MOSI     <= r_TX_Byte[r_TX_Bit_Count];
+        o_SPI_MOSI     <= r_TX_Byte[r_TX_Bit_Count];//将发送控制序列中一位位发送
 
       end
 
@@ -378,42 +318,26 @@ module SPI_Master
 
   end
 
-
-
-
-
-  // Purpose: Read in MISO data.
+  // Purpose: Read in MISO data.//读取输出数据
 
   always @(posedge i_Clk or negedge i_Rst_L)
-
   begin
-
+    
     if (~i_Rst_L)
-
-    begin
-
-      o_RX_Byte      <= 8'h00;
-
-      o_RX_DV        <= 1'b0;
-
-      r_RX_Bit_Count <= 3'b111;
-
-    end
+      begin
+        o_RX_Byte      <= 8'h00;
+        o_RX_DV        <= 1'b0;
+        r_RX_Bit_Count <= 3'b111;
+      end
 
     else
-
     begin
-
-
 
       // Default Assignments
 
       o_RX_DV   <= 1'b0;
 
-
-
       if (o_TX_Ready) // Check if ready is high, if so reset bit count to default
-
       begin
 
         r_RX_Bit_Count <= 3'b111;
