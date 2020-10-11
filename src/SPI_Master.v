@@ -142,7 +142,7 @@ module SPI_Master
 
 
   // Purpose: Generate SPI Clock correct number of times when DV pulse comes
-  //产生SPI时钟信号，记录时钟的边沿
+  //产生SPI时钟信号，并记录时钟的边沿
   always @(posedge i_Clk or negedge i_Rst_L)
 
   begin
@@ -304,7 +304,7 @@ module SPI_Master
 
       end
 
-      else if ((r_Leading_Edge & w_CPHA) | (r_Trailing_Edge & ~w_CPHA))
+      else if ((r_Leading_Edge & w_CPHA) | (r_Trailing_Edge & ~w_CPHA)) //在边缘到来时发送
 
       begin
 
