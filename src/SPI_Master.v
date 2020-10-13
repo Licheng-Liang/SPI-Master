@@ -62,7 +62,7 @@
 
 module SPI_Master
 
-  #(parameter SPI_MODE = 0,
+  #(parameter SPI_MODE = 0,  //这里用的是模式0,在例化时可通过传入参数来改变模式
 
     parameter CLKS_PER_HALF_BIT = 2)
 
@@ -95,21 +95,21 @@ module SPI_Master
 
   reg r_SPI_Clk;
 
-  reg [4:0] r_SPI_Clk_Edges;
+  reg [4:0] r_SPI_Clk_Edges;  
 
-  reg r_Leading_Edge;
+  reg r_Leading_Edge;  //上升沿
 
-  reg r_Trailing_Edge;
+  reg r_Trailing_Edge;  //下降沿
 
-  reg       r_TX_DV;
+  reg       r_TX_DV;   //发射允许脉冲
 
-  reg [7:0] r_TX_Byte;
+  reg [7:0] r_TX_Byte;  //发射数据
 
 
 
-  reg [2:0] r_RX_Bit_Count;
+  reg [2:0] r_RX_Bit_Count;  //接收数据计数
 
-  reg [2:0] r_TX_Bit_Count;
+  reg [2:0] r_TX_Bit_Count;  //发射数据计数
 
 
 
@@ -119,7 +119,7 @@ module SPI_Master
 
   // CPOL=1 means clock idles at 1, leading edge is falling edge.
 
-  assign w_CPOL  = (SPI_MODE == 2) | (SPI_MODE == 3);
+  assign w_CPOL  = (SPI_MODE == 2) | (SPI_MODE == 3); 
 
 
 
@@ -217,10 +217,9 @@ module SPI_Master
       end  
 
       else
-
       begin
 
-        o_TX_Ready <= 1'b1;
+        o_TX_Ready <= 1'b1;              
 
       end
 
@@ -393,9 +392,6 @@ module SPI_Master
       end // else: !if(~i_Rst_L)
 
   end // always @ (posedge i_Clk or negedge i_Rst_L)
-
   
-
-
 
 endmodule // SPI_Master
